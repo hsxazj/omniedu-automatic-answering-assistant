@@ -1,6 +1,6 @@
 # OmniEdu自动答题助手
 
-这是一个面向www.omniedu.com的，基于Tampermonkey的用户脚本，通过DOM解析的方式识别题目，然后通过ai接口来作答，支持多个AI模型（包括DeepSeek和Kimi）。
+这是一个面向www.omniedu.com的，基于Tampermonkey的用户脚本，通过DOM解析的方式识别题目，然后通过ai接口来作答，支持多个AI接口的调用。
 
 
 
@@ -28,8 +28,6 @@ npm install
 npm run dev
 ```
 
-该命令会启动监听模式，当源文件发生变化时自动重新编译。编译后的文件将生成在`dist`目录下。
-
 ### 记住编译文件位置
 
 ![QQ_1752550488142](README.assets/QQ_1752550488142.png)
@@ -40,7 +38,9 @@ npm run dev
 
 ![QQ_1752550523838](README.assets/QQ_1752550523838.png)
 
-勾选**允许访问文件 URL**![QQ_1752550634961](README.assets/QQ_1752550634961.png)
+勾选**允许访问文件 URL**
+
+![QQ_1752550634961](README.assets/QQ_1752550634961.png)
 
 在浏览器地址栏输入编译文件地址
 
@@ -70,7 +70,10 @@ npm run dev
 保存配置并测试连接，如果成功会弹出测试成功的提示
 
 ![QQ_1752552405810](README.assets/QQ_1752552405810.png)
-开始答题，点击开始答题后，会将题目一次性全部发给ai，所以较为缓慢，无需着急
+
+### 开始答题
+
+点击开始答题后，会将题目一次性全部发给ai，所以较为缓慢，无需着急
 
 ![QQ_1752552471158](README.assets/QQ_1752552471158.png)
 
@@ -88,7 +91,7 @@ npm run dev
 
 - DeepSeek
 - Kimi
-- chatgpt（TODO）
+- chatgpt（未测试）
 
 
 
