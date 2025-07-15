@@ -96,3 +96,9 @@ npm run dev
 
 1. 安装编译好的用户脚本到Tampermonkey
 2. 在脚本设置面板中选择想要使用的模型并配置API密钥（点击保存配置后生效）
+
+
+
+## 致谢
+
+感谢[curly210102/create-tampermonkey: An easy way to start a Tampermonkey Userscript](https://github.com/curly210102/create-tampermonkey)提供的脚手架
