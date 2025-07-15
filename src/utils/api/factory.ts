@@ -1,6 +1,7 @@
 import { BaseAPIProvider } from './base';
 import { MoonshotAPIProvider } from './moonshot';
 import { DeepSeekAPIProvider } from './deepseek';
+import { ChatGPTAPIProvider } from './chatgpt';
 import { getConfig } from '../config';
 
 export class APIFactory {
@@ -24,6 +25,12 @@ export class APIFactory {
                     this.provider = new DeepSeekAPIProvider({
                         apiKey: config.apiKey,
                         baseURL: 'https://api.deepseek.com/v1'
+                    });
+                    break;
+                case 'chatgpt':
+                    this.provider = new ChatGPTAPIProvider({
+                        apiKey: config.apiKey,
+                        baseURL: 'https://api.openai.com/v1'
                     });
                     break;
                 case 'moonshot':

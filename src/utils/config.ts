@@ -1,5 +1,5 @@
 export interface Config {
-    apiType: 'moonshot' | 'deepseek';
+    apiType: 'moonshot' | 'deepseek' | 'chatgpt';
     apiKey: string;
     debugMode: boolean;
 }
