@@ -1,0 +1,25 @@
+{
+  "name": "OmniEdu自动答题助手",
+  "namespace": "http://tampermonkey.net/",
+  "version": "0.1",
+  "description": "OmniEdu在线教育平台自动答题助手，支持自动答题、自动提交等功能",
+  "author": "AI Assistant",
+  "@match": [
+    "https://www.omniedu.com/*",
+    "http://www.omniedu.com/*",
+    "https://omniedu.com/*",
+    "http://omniedu.com/*"
+  ],
+  "@grant": [
+    "GM_addStyle",
+    "GM_getValue",
+    "GM_setValue",
+    "GM_xmlhttpRequest",
+    "unsafeWindow"
+  ],
+  "@run-at": "document-end",
+  "@connect": [
+    "api.moonshot.cn",
+    "api.deepseek.com"
+  ]
+}

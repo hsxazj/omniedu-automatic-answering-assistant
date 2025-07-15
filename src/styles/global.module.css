@@ -1,0 +1,46 @@
+.container {
+  font-size: 16px;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 999;
+  min-width: 15em;
+  max-width: 100%;
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 1em;
+  text-align: center;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+}
+
+.check {
+  color: green;
+  vertical-align: middle;
+  margin-right: 0.5em;
+}
+
+.supports {
+  text-align: left;
+  width: auto;
+  line-height: 2;
+}
+
+.button {
+  padding: 0.2em 2em;
+  border-radius: 2px;
+  text-align: center;
+  background-color: #000;
+  color: #fff;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.hide {
+  display: none;
+}
