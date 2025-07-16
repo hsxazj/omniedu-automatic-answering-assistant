@@ -20,23 +20,29 @@ export class APIFactory {
     public getProvider(): BaseAPIProvider {
         if (!this.provider) {
             const config = getConfig();
+            const apiKey = config.apiKeys[config.apiType];
+            
+            if (!apiKey) {
+                throw new Error(`未设置 ${config.apiType} 的API密钥`);
+            }
+
             switch (config.apiType) {
                 case 'deepseek':
                     this.provider = new DeepSeekAPIProvider({
-                        apiKey: config.apiKey,
+                        apiKey,
                         baseURL: 'https://api.deepseek.com/v1'
                     });
                     break;
                 case 'chatgpt':
                     this.provider = new ChatGPTAPIProvider({
-                        apiKey: config.apiKey,
+                        apiKey,
                         baseURL: 'https://api.openai.com/v1'
                     });
                     break;
                 case 'moonshot':
                 default:
                     this.provider = new MoonshotAPIProvider({
-                        apiKey: config.apiKey,
+                        apiKey,
                         baseURL: 'https://api.moonshot.cn/v1'
                     });
                     break;

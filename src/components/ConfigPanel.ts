@@ -6,10 +6,12 @@ import { APIFactory } from '../utils/api/factory';
 export class ConfigPanel {
     private panel: HTMLElement;
     private answerHandler: AnswerHandler;
+    private currentConfig: Config;
 
     constructor() {
         this.panel = this.createPanel();
         this.answerHandler = AnswerHandler.getInstance();
+        this.currentConfig = getConfig();
         this.initEvents();
     }
 
@@ -39,7 +41,7 @@ export class ConfigPanel {
                     <div class="${styles.formItem}">
                         <label>API类型</label>
                         <select id="api-type">
-                            <option value="kimi">Kimi</option>
+                            <option value="moonshot">Moonshot</option>
                             <option value="deepseek">Deepseek</option>
                             <option value="chatgpt">ChatGPT</option>
                         </select>
@@ -53,7 +55,7 @@ export class ConfigPanel {
                         <div class="${styles.apiKeyHelp}">
                             <p>API密钥格式说明：</p>
                             <ul>
-                                <li>Kimi: 以 sk- 开头</li>
+                                <li>Moonshot: 以 sk- 开头</li>
                                 <li>Deepseek: 以 sk- 开头</li>
                                 <li>ChatGPT: 以 sk- 开头</li>
                             </ul>
@@ -72,6 +74,13 @@ export class ConfigPanel {
     }
 
     private initEvents(): void {
+        // 初始化当前选中的API类型和对应的密钥
+        const apiTypeSelect = document.getElementById('api-type') as HTMLSelectElement;
+        const apiKeyInput = document.getElementById('api-key') as HTMLInputElement;
+        
+        apiTypeSelect.value = this.currentConfig.apiType;
+        apiKeyInput.value = this.currentConfig.apiKeys[this.currentConfig.apiType] || '';
+
         // 关闭按钮事件
         this.panel.querySelector(`.${styles.closeBtn}`)?.addEventListener('click', () => {
             this.hide();
@@ -117,17 +126,18 @@ export class ConfigPanel {
             });
         });
 
-        // API类型切换时验证API密钥
+        // API类型切换时加载对应的API密钥
         document.getElementById('api-type')?.addEventListener('change', (event) => {
-            const apiKey = (document.getElementById('api-key') as HTMLInputElement).value;
-            const apiType = (event.target as HTMLSelectElement).value as 'kimi' | 'deepseek' | 'chatgpt';
-            this.validateApiKey(apiKey, apiType);
+            const apiType = (event.target as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt';
+            const apiKeyInput = document.getElementById('api-key') as HTMLInputElement;
+            apiKeyInput.value = this.currentConfig.apiKeys[apiType] || '';
+            this.validateApiKey(apiKeyInput.value, apiType);
         });
 
         // API密钥输入时实时验证
         document.getElementById('api-key')?.addEventListener('input', (event) => {
             const apiKey = (event.target as HTMLInputElement).value;
-            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'kimi' | 'deepseek' | 'chatgpt';
+            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt';
             this.validateApiKey(apiKey, apiType);
         });
 
@@ -137,7 +147,7 @@ export class ConfigPanel {
             if (!button) return;
 
             const apiKey = (document.getElementById('api-key') as HTMLInputElement).value;
-            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'kimi' | 'deepseek' | 'chatgpt';
+            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt';
 
             if (!this.validateApiKey(apiKey, apiType)) {
                 return;
@@ -147,9 +157,23 @@ export class ConfigPanel {
                 button.textContent = '测试中...';
                 button.disabled = true;
 
-                const apiFactory = APIFactory.getInstance();
-                const provider = apiFactory.getProvider();
-
+                // 创建临时配置进行测试
+                const testConfig: Config = {
+                    ...this.currentConfig,
+                    apiType,
+                    apiKeys: {
+                        ...this.currentConfig.apiKeys,
+                        [apiType]: apiKey
+                    }
+                };
+                
+                // 临时保存配置用于测试
+                saveConfig(testConfig);
+                
+                // 重置API提供者以使用新配置
+                APIFactory.getInstance().resetProvider();
+                
+                const provider = APIFactory.getInstance().getProvider();
                 const response = await provider.chat([
                     { role: 'user', content: '你好，这是一个测试消息。请回复"连接成功"。' }
                 ]);
@@ -164,27 +188,34 @@ export class ConfigPanel {
             } finally {
                 button.textContent = '测试连接';
                 button.disabled = false;
+                
+                // 恢复原始配置
+                saveConfig(this.currentConfig);
+                APIFactory.getInstance().resetProvider();
             }
         });
 
         // 保存API配置
         document.getElementById('save-api')?.addEventListener('click', () => {
             const apiKey = (document.getElementById('api-key') as HTMLInputElement).value;
-            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'kimi' | 'deepseek' | 'chatgpt';
+            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt';
 
             if (!this.validateApiKey(apiKey, apiType)) {
                 return;
             }
 
-            // 创建新的配置对象
-            const config: Config = {
+            // 更新配置
+            this.currentConfig = {
+                ...this.currentConfig,
                 apiType,
-                apiKey,
-                debugMode: true // 保持默认值
+                apiKeys: {
+                    ...this.currentConfig.apiKeys,
+                    [apiType]: apiKey
+                }
             };
             
             // 保存配置
-            saveConfig(config);
+            saveConfig(this.currentConfig);
 
             // 重置API提供者，这样下次使用时会使用新的配置
             APIFactory.getInstance().resetProvider();
@@ -220,7 +251,7 @@ export class ConfigPanel {
         });
     }
 
-    private validateApiKey(apiKey: string, apiType: 'kimi' | 'deepseek' | 'chatgpt'): boolean {
+    private validateApiKey(apiKey: string, apiType: 'moonshot' | 'deepseek' | 'chatgpt'): boolean {
         const input = document.getElementById('api-key') as HTMLInputElement;
         const saveButton = document.getElementById('save-api') as HTMLButtonElement;
         const testButton = document.getElementById('test-api') as HTMLButtonElement;
@@ -252,11 +283,11 @@ export class ConfigPanel {
         // 加载已保存的配置
         const config = getConfig();
         (document.getElementById('api-type') as HTMLSelectElement).value = config.apiType;
-        (document.getElementById('api-key') as HTMLInputElement).value = config.apiKey;
+        (document.getElementById('api-key') as HTMLInputElement).value = config.apiKeys[config.apiType] || '';
         
         // 只有当API key不为空时才验证
-        if (config.apiKey) {
-        this.validateApiKey(config.apiKey, config.apiType);
+        if (config.apiKeys[config.apiType]) {
+        this.validateApiKey(config.apiKeys[config.apiType], config.apiType);
         }
 
         // 扫描并显示题目
