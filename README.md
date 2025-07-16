@@ -65,7 +65,7 @@ npm run dev
 1. [Moonshot AI - 开放平台](https://platform.moonshot.cn/docs/introduction#文本生成模型)
 2. [DeepSeekI - 开放平台](https://platform.deepseek.com/)
 
-![QQ_1752552145946](README.assets/QQ_1752552145946.png)
+![QQ_1752629140744](README.assets/QQ_1752629140744.png)
 
 保存配置并测试连接，如果成功会弹出测试成功的提示
 
