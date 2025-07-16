@@ -1,6 +1,6 @@
 # OmniEdu自动答题助手
 
-这是一个面向www.omniedu.com的，基于Tampermonkey的用户脚本，通过DOM解析的方式识别题目，然后通过ai接口来作答，支持多个AI接口的调用。
+这是一个面向[omniedu(中软国际教育)](www.omniedu.com)的Tampermonkey脚本，通过DOM解析的方式识别题目，然后通过ai接口来作答，支持多个AI接口的调用。
 
 
 
