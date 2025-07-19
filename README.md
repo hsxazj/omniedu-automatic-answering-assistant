@@ -4,66 +4,33 @@
 
 
 
-## 系统要求
+## 版本声明
 
 - Node.js >= 20.0.0
 - npm >= 9.0.0
-- Tampermonkey浏览器插件
 
 
 
-## 安装步骤
+## 安装
 
-### 安装依赖：
-
-```bash
-npm install
-```
-
-### 编译
-
-运行以下命令编译：
-
-```bash
-npm run dev
-```
-
-### 记住编译文件位置
-
-![QQ_1752550488142](README.assets/QQ_1752550488142.png)
-
-### 配置油猴
-
-进入浏览器插件管理页并点击油猴的详细信息
-
-![QQ_1752550523838](README.assets/QQ_1752550523838.png)
-
-勾选**允许访问文件 URL**
-
-![QQ_1752550634961](README.assets/QQ_1752550634961.png)
-
-在浏览器地址栏输入编译文件地址
-
-![QQ_1752550681577](README.assets/QQ_1752550681577.png)
-
-安装或重新安装
-
-![QQ_1752550771712](README.assets/QQ_1752550771712.png)
+前往[Greasy Fork](https://greasyfork.org/zh-CN/scripts/542968-omniedu自动答题助手)快捷安装
 
 
 
-### 开始使用
+## 开始使用
 
 进入作答页面后会识别题目
 
 ![QQ_1752552103009](README.assets/QQ_1752552103009.png)
+
+### 配置apiKey
 
 选择模型并填入密钥（Moonshot有15块钱免费额度，chatgpt未经测试）
 
 申请密钥入口
 
 1. [Moonshot AI - 开放平台](https://platform.moonshot.cn/docs/introduction#文本生成模型)
-2. [DeepSeekI - 开放平台](https://platform.deepseek.com/)
+2. [DeepSeek - 开放平台](https://platform.deepseek.com/)
 
 ![QQ_1752629140744](README.assets/QQ_1752629140744.png)
 
