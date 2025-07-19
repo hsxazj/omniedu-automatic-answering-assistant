@@ -22,7 +22,8 @@ function init() {
         document.body.appendChild(configBtn);
         debug('初始化完成');
     } catch (error) {
-        debug('初始化失败: ' + error.message);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        debug('初始化失败: ' + errorMessage);
     }
 }
 

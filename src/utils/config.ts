@@ -1,16 +1,21 @@
 export interface Config {
-    apiType: 'moonshot' | 'deepseek' | 'chatgpt';
+    apiType: 'moonshot' | 'deepseek' | 'chatgpt' | 'custom-openai';
     apiKeys: {
         moonshot?: string;
         deepseek?: string;
         chatgpt?: string;
+        'custom-openai'?: string;
     };
+    customOpenAIUrl?: string;
+    customOpenAIModel?: string;
     debugMode: boolean;
 }
 
 const defaultConfig: Config = {
     apiType: 'moonshot',
     apiKeys: {},
+    customOpenAIUrl: 'https://new.ljcljc.cn/v1',
+    customOpenAIModel: 'gpt-4.1',
     debugMode: true
 };
 
@@ -41,4 +46,4 @@ export function debug(message: string): void {
     if (config.debugMode) {
         console.log('[自动答题助手]', message);
     }
-} 
+}

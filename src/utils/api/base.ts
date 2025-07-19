@@ -54,14 +54,14 @@ export abstract class BaseAPIProvider extends EventEmitter {
                 headers: options.headers,
                 data: options.body ? JSON.stringify(options.body) : undefined,
                 responseType: 'json',
-                onload: function(response) {
+                onload: function(response: any) {
                     if (response.status >= 200 && response.status < 300) {
                         resolve(response.response);
                     } else {
                         reject(new Error(`HTTP Error: ${response.status} ${response.statusText}`));
                     }
                 },
-                onerror: function(error) {
+                onerror: function(error: any) {
                     reject(new Error('Network Error: ' + error.error));
                 }
             });
@@ -93,7 +93,8 @@ export abstract class BaseAPIProvider extends EventEmitter {
                 data: response
             };
         } catch (error) {
-            throw new Error(`API Error: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`API Error: ${errorMessage}`);
         }
     }
 
@@ -119,7 +120,8 @@ export abstract class BaseAPIProvider extends EventEmitter {
                 data: response
             };
         } catch (error) {
-            throw new Error(`API Error: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`API Error: ${errorMessage}`);
         }
     }
-} 
+}

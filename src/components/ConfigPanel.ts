@@ -1,6 +1,6 @@
 import styles from '../styles/auto-answer.module.css';
 import { getConfig, saveConfig, debug, Config } from '../utils/config';
-import { AnswerHandler } from '../utils/answer';
+import { AnswerHandler, Question } from '../utils/answer';
 import { APIFactory } from '../utils/api/factory';
 
 export class ConfigPanel {
@@ -44,7 +44,21 @@ export class ConfigPanel {
                             <option value="moonshot">Moonshot</option>
                             <option value="deepseek">Deepseek</option>
                             <option value="chatgpt">ChatGPT</option>
+                            <option value="custom-openai">自定义OpenAI接口</option>
                         </select>
+                    </div>
+                    <div class="${styles.formItem}" id="custom-url-item" style="display: none;">
+                        <label>自定义API地址</label>
+                        <input type="text" id="custom-openai-url" placeholder="请输入自定义OpenAI API地址，如：https://new.ljcljc.cn/v1" value="">
+                        <div class="${styles.apiKeyHelp}">
+                            <p>请输入完整的API地址，包括协议和版本号</p>
+                            <p>推荐使用 <a href="https://e.ljcsys.top/ai/" target="_blank" style="color: #409EFF; text-decoration: none;">AI API</a> 代理服务，支持 ChatGPT、Gemini、Claude 等主流模型，一键接入。</p>
+                            <p><a href="https://new.ljcljc.cn/pricing" target="_blank" style="color: #409EFF; text-decoration: none;">查看模型列表</a></p>
+                        </div>
+                    </div>
+                    <div class="${styles.formItem}" id="custom-model-item" style="display: none;">
+                        <label>自定义模型</label>
+                        <input type="text" id="custom-openai-model" placeholder="gpt-4.1" value="">
                     </div>
                     <div class="${styles.formItem}">
                         <label>API密钥</label>
@@ -58,6 +72,7 @@ export class ConfigPanel {
                                 <li>Moonshot: 以 sk- 开头</li>
                                 <li>Deepseek: 以 sk- 开头</li>
                                 <li>ChatGPT: 以 sk- 开头</li>
+                                <li>自定义OpenAI: 以 sk- 开头</li>
                             </ul>
                         </div>
                     </div>
@@ -77,9 +92,14 @@ export class ConfigPanel {
         // 初始化当前选中的API类型和对应的密钥
         const apiTypeSelect = document.getElementById('api-type') as HTMLSelectElement;
         const apiKeyInput = document.getElementById('api-key') as HTMLInputElement;
+        const customUrlInput = document.getElementById('custom-openai-url') as HTMLInputElement;
         
         apiTypeSelect.value = this.currentConfig.apiType;
         apiKeyInput.value = this.currentConfig.apiKeys[this.currentConfig.apiType] || '';
+        customUrlInput.value = this.currentConfig.customOpenAIUrl || '';
+        
+        // 初始化自定义URL输入框的显示状态
+        this.toggleCustomUrlInput(this.currentConfig.apiType);
 
         // 关闭按钮事件
         this.panel.querySelector(`.${styles.closeBtn}`)?.addEventListener('click', () => {
@@ -128,16 +148,17 @@ export class ConfigPanel {
 
         // API类型切换时加载对应的API密钥
         document.getElementById('api-type')?.addEventListener('change', (event) => {
-            const apiType = (event.target as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt';
+            const apiType = (event.target as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt' | 'custom-openai';
             const apiKeyInput = document.getElementById('api-key') as HTMLInputElement;
             apiKeyInput.value = this.currentConfig.apiKeys[apiType] || '';
             this.validateApiKey(apiKeyInput.value, apiType);
+            this.toggleCustomUrlInput(apiType);
         });
 
         // API密钥输入时实时验证
         document.getElementById('api-key')?.addEventListener('input', (event) => {
             const apiKey = (event.target as HTMLInputElement).value;
-            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt';
+            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt' | 'custom-openai';
             this.validateApiKey(apiKey, apiType);
         });
 
@@ -147,15 +168,23 @@ export class ConfigPanel {
             if (!button) return;
 
             const apiKey = (document.getElementById('api-key') as HTMLInputElement).value;
-            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt';
+            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt' | 'custom-openai';
+            const customUrl = (document.getElementById('custom-openai-url') as HTMLInputElement).value;
 
             if (!this.validateApiKey(apiKey, apiType)) {
                 return;
             }
 
+            if (apiType === 'custom-openai' && !customUrl.trim()) {
+                alert('请输入自定义API地址');
+                return;
+            }
+
             try {
-                button.textContent = '测试中...';
-                button.disabled = true;
+                (button as HTMLButtonElement).textContent = '测试中...';
+                (button as HTMLButtonElement).disabled = true;
+
+                const customModel = (document.getElementById('custom-openai-model') as HTMLInputElement).value;
 
                 // 创建临时配置进行测试
                 const testConfig: Config = {
@@ -164,7 +193,9 @@ export class ConfigPanel {
                     apiKeys: {
                         ...this.currentConfig.apiKeys,
                         [apiType]: apiKey
-                    }
+                    },
+                    customOpenAIUrl: apiType === 'custom-openai' ? customUrl : this.currentConfig.customOpenAIUrl,
+                    customOpenAIModel: apiType === 'custom-openai' ? (customModel || 'gpt-4.1') : this.currentConfig.customOpenAIModel
                 };
                 
                 // 临时保存配置用于测试
@@ -184,10 +215,11 @@ export class ConfigPanel {
                     alert('API连接测试失败：响应格式不正确');
                 }
             } catch (error) {
-                alert('API连接测试失败：' + error.message);
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                alert('API连接测试失败：' + errorMessage);
             } finally {
-                button.textContent = '测试连接';
-                button.disabled = false;
+                (button as HTMLButtonElement).textContent = '测试连接';
+                (button as HTMLButtonElement).disabled = false;
                 
                 // 恢复原始配置
                 saveConfig(this.currentConfig);
@@ -198,11 +230,19 @@ export class ConfigPanel {
         // 保存API配置
         document.getElementById('save-api')?.addEventListener('click', () => {
             const apiKey = (document.getElementById('api-key') as HTMLInputElement).value;
-            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt';
+            const apiType = (document.getElementById('api-type') as HTMLSelectElement).value as 'moonshot' | 'deepseek' | 'chatgpt' | 'custom-openai';
+            const customUrl = (document.getElementById('custom-openai-url') as HTMLInputElement).value;
 
             if (!this.validateApiKey(apiKey, apiType)) {
                 return;
             }
+
+            if (apiType === 'custom-openai' && !customUrl.trim()) {
+                alert('请输入自定义API地址');
+                return;
+            }
+
+            const customModel = (document.getElementById('custom-openai-model') as HTMLInputElement).value;
 
             // 更新配置
             this.currentConfig = {
@@ -211,7 +251,9 @@ export class ConfigPanel {
                 apiKeys: {
                     ...this.currentConfig.apiKeys,
                     [apiType]: apiKey
-                }
+                },
+                customOpenAIUrl: apiType === 'custom-openai' ? customUrl : this.currentConfig.customOpenAIUrl,
+                customOpenAIModel: apiType === 'custom-openai' ? (customModel || 'gpt-4.1') : this.currentConfig.customOpenAIModel
             };
             
             // 保存配置
@@ -228,7 +270,7 @@ export class ConfigPanel {
             const button = document.getElementById('toggle-answer');
             if (!button) return;
 
-            if (this.answerHandler.isProcessing) {
+            if ((this.answerHandler as any).isProcessing) {
                 this.answerHandler.stopAutoAnswer();
                 button.textContent = '开始答题';
                 button.classList.remove(styles.btnDanger);
@@ -247,11 +289,27 @@ export class ConfigPanel {
         // 重新扫描按钮事件
         document.getElementById('scan-questions')?.addEventListener('click', async () => {
             await this.answerHandler.scanQuestions();
-            this.updateQuestionGrid();
+            const questions = await this.answerHandler.scanQuestions();
+            this.updateQuestionGrid(questions);
         });
     }
 
-    private validateApiKey(apiKey: string, apiType: 'moonshot' | 'deepseek' | 'chatgpt'): boolean {
+    private toggleCustomUrlInput(apiType: string): void {
+        const customUrlItem = document.getElementById('custom-url-item');
+        const customModelItem = document.getElementById('custom-model-item');
+        
+        if (customUrlItem && customModelItem) {
+            if (apiType === 'custom-openai') {
+                customUrlItem.style.display = 'block';
+                customModelItem.style.display = 'block';
+            } else {
+                customUrlItem.style.display = 'none';
+                customModelItem.style.display = 'none';
+            }
+        }
+    }
+
+    private validateApiKey(apiKey: string, apiType: 'moonshot' | 'deepseek' | 'chatgpt' | 'custom-openai'): boolean {
         const input = document.getElementById('api-key') as HTMLInputElement;
         const saveButton = document.getElementById('save-api') as HTMLButtonElement;
         const testButton = document.getElementById('test-api') as HTMLButtonElement;
@@ -284,10 +342,15 @@ export class ConfigPanel {
         const config = getConfig();
         (document.getElementById('api-type') as HTMLSelectElement).value = config.apiType;
         (document.getElementById('api-key') as HTMLInputElement).value = config.apiKeys[config.apiType] || '';
+        (document.getElementById('custom-openai-url') as HTMLInputElement).value = config.customOpenAIUrl || '';
+        (document.getElementById('custom-openai-model') as HTMLInputElement).value = config.customOpenAIModel || '';
+        
+        // 显示/隐藏自定义URL和模型输入框
+        this.toggleCustomUrlInput(config.apiType);
         
         // 只有当API key不为空时才验证
         if (config.apiKeys[config.apiType]) {
-        this.validateApiKey(config.apiKeys[config.apiType], config.apiType);
+            this.validateApiKey(config.apiKeys[config.apiType] || '', config.apiType);
         }
 
         // 扫描并显示题目
@@ -296,7 +359,7 @@ export class ConfigPanel {
 
         // 添加选项点击的全局处理函数
         (window as any).selectOption = (questionIndex: number, optionLetter: string) => {
-            this.answerHandler.selectOption(questionIndex, optionLetter);
+            (this.answerHandler as any).selectOption(questionIndex, optionLetter);
         };
 
         // 添加填空题输入框值更新的全局处理函数
@@ -313,7 +376,7 @@ export class ConfigPanel {
         };
     }
 
-    private updateQuestionGrid(questions: Array<{ index: number; content: string; answer?: string }>) {
+    private updateQuestionGrid(questions: Question[]) {
         const grid = this.panel.querySelector(`.${styles.questionGrid}`);
         if (!grid) return;
 
@@ -379,4 +442,4 @@ export class ConfigPanel {
             ` : ''}
         `;
     }
-} 
+}
