@@ -5,7 +5,7 @@ export class PromptGenerator {
         return questions.map(q => {
             let questionText = `${q.index}. ${q.content}`;
             if (q.options) {
-                questionText += '\n' + q.options.map(opt => `   ${opt}`).join('\n');
+                questionText += '\n' + q.options.map((opt: string) => `   ${opt}`).join('\n');
             }
             // 添加填空题/简答题的标识
             if (q.type === 'text') {
@@ -82,10 +82,10 @@ export class PromptGenerator {
         prompt += this.getQuestionTypeInstructions() + '\n\n';
 
         // 按题型分组添加题目
-        for (const [type, questions] of Object.entries(questionsByType)) {
-            if (questions.length > 0) {
+        for (const [type, questionsOfType] of Object.entries(questionsByType)) {
+            if (questionsOfType.length > 0) {
                 prompt += `${this.getTypeTitle(type)}：\n`;
-                prompt += this.formatQuestions(questions) + '\n\n';
+                prompt += this.formatQuestions(questionsOfType) + '\n\n';
             }
         }
 
@@ -111,4 +111,4 @@ const questions = [
 ];
 
 const prompt = PromptGenerator.generatePrompt(questions);
-*/ 
+*/

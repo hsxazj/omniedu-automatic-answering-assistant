@@ -2,7 +2,7 @@ import { debug } from './config';
 import { PromptGenerator } from './prompt-generator';
 import { APIFactory } from './api/factory';
 
-interface Question {
+export interface Question {
     index: number;
     content: string;
     options?: string[];
@@ -282,7 +282,8 @@ export class AnswerHandler {
             debug(`共扫描到 ${questions.length} 个题目`);
             return questions;
         } catch (error) {
-            debug('扫描题目失败: ' + error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            debug('扫描题目失败: ' + errorMessage);
             return [];
         }
     }
@@ -399,7 +400,8 @@ export class AnswerHandler {
                 confidence
             };
         } catch (error) {
-            debug(`获取答案失败: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            debug(`获取答案失败: ${errorMessage}`);
             return null;
         }
     }
@@ -455,7 +457,8 @@ export class AnswerHandler {
 
             return true;
         } catch (error) {
-            debug(`提交答案失败: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            debug(`提交答案失败: ${errorMessage}`);
             return false;
         }
     }
@@ -504,7 +507,8 @@ export class AnswerHandler {
 
             debug('自动答题完成');
         } catch (error) {
-            debug('自动答题失败: ' + error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            debug('自动答题失败: ' + errorMessage);
         } finally {
             this.isProcessing = false;
         }
@@ -619,7 +623,8 @@ export class AnswerHandler {
                 }
             }
         } catch (error) {
-            debug('处理AI响应失败：' + error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            debug('处理AI响应失败：' + errorMessage);
             throw error;
         }
     }
@@ -687,4 +692,4 @@ export class AnswerHandler {
     public getQuestions(): Question[] {
         return this.questions;
     }
-} 
+}
