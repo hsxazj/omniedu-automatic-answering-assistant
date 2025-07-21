@@ -287,179 +287,6 @@ export class AnswerHandler {
         }
     }
 
-    private detectQuestionType(container: HTMLElement, question: Question): void {
-        // 检查是否为判断题
-        const content = question.content.toLowerCase();
-        if (content.includes('判断') || content.includes('正确') || content.includes('错误')) {
-            question.type = 'judgement';
-            return;
-        }
-
-        // 检查是否为填空题
-        if (container.querySelector('input[type="text"], textarea')) {
-            question.type = 'text';
-            return;
-        }
-
-        // 检查是否为多选题
-        if (container.querySelector('input[type="checkbox"]')) {
-            question.type = 'multiple';
-            return;
-        }
-
-        // 检查选项数量
-        const optionCount = container.querySelectorAll('input[type="radio"]').length;
-        if (optionCount > 0) {
-            question.type = 'single';
-            return;
-        }
-
-        // 通过选项文本判断
-        const options = container.querySelectorAll('.option, .answer-option');
-        if (options.length > 0) {
-            let isMultiple = false;
-            options.forEach(option => {
-                const text = option.textContent || '';
-                if (text.includes('多选') || text.match(/[A-Z]{2,}/)) {
-                    isMultiple = true;
-                }
-            });
-            question.type = isMultiple ? 'multiple' : 'single';
-        }
-    }
-
-    private extractOptions(container: HTMLElement): string[] {
-        const options: string[] = [];
-        
-        // 扩展选项的选择器
-        const optionElements = container.querySelectorAll(
-            '.option, .answer-option, label, ' +
-            '.choice, .option-item, .answer-item, ' +
-            '.option-wrapper, .answer-wrapper, .optionUl li'
-        );
-        
-        optionElements.forEach(element => {
-            // 调试：高亮选项
-            element.classList.add('debug-highlight-option');
-            
-            const text = cleanText(element.textContent || '');
-            if (text && !options.includes(text)) {
-                // 移除选项标记（A. B. C.等）
-                const cleanOption = text.replace(/^[A-Z][.、\s]?/i, '').trim();
-                if (cleanOption) {
-                    options.push(cleanOption);
-                }
-            }
-        });
-
-        return options;
-    }
-
-    public async getAnswer(question: Question): Promise<AnswerResult | null> {
-        try {
-            const config = {
-                model: "gpt-3.5-turbo",
-                messages: [{
-                    role: "system",
-                    content: "你是一个专业的答题助手。请根据题目内容和选项，给出最可能的答案。"
-                }, {
-                    role: "user",
-                    content: `题目类型: ${question.type}\n题目内容: ${question.content}\n${
-                        question.options ? '选项: ' + question.options.join(' | ') : ''
-                    }`
-                }]
-            };
-
-            const response = await fetch('https://api.example.com/answer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(config)
-            });
-
-            if (!response.ok) {
-                throw new Error('API请求失败');
-            }
-
-            const result = await response.json();
-            
-            // 如果有选项，计算答案与选项的相似度
-            let confidence = 1;
-            if (question.options) {
-                const similarities = question.options.map(option => 
-                    stringSimilarity(result.answer.toLowerCase(), option.toLowerCase())
-                );
-                confidence = Math.max(...similarities);
-            }
-
-            return {
-                question: question.content,
-                answer: result.answer,
-                confidence
-            };
-        } catch (error) {
-            debug(`获取答案失败: ${error.message}`);
-            return null;
-        }
-    }
-
-    public async submitAnswer(question: Question, answer: string): Promise<boolean> {
-        try {
-            switch (question.type) {
-                case 'single':
-                case 'multiple': {
-                    if (!question.options) return false;
-                    
-                    const answers = answer.split(',').map(a => a.trim());
-                    const options = question.element.querySelectorAll('input[type="radio"], input[type="checkbox"]');
-                    
-                    options.forEach((input, index) => {
-                        if (index < question.options!.length) {
-                            const optionText = question.options![index];
-                            const shouldCheck = answers.some(ans => 
-                                stringSimilarity(ans.toLowerCase(), optionText.toLowerCase()) > 0.8
-                            );
-                            
-                            if (shouldCheck) {
-                                (input as HTMLInputElement).checked = true;
-                                input.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        }
-                    });
-                    break;
-                }
-                case 'judgement': {
-                    const trueWords = ['正确', '是', '对', 'true', 't', '√'];
-                    const isTrue = trueWords.some(word => 
-                        answer.toLowerCase().includes(word.toLowerCase())
-                    );
-                    
-                    const options = question.element.querySelectorAll('input[type="radio"]');
-                    if (options.length >= 2) {
-                        (options[isTrue ? 0 : 1] as HTMLInputElement).checked = true;
-                        options[isTrue ? 0 : 1].dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                    break;
-                }
-                case 'text': {
-                    const input = question.element.querySelector('input[type="text"], textarea');
-                    if (input) {
-                        (input as HTMLInputElement).value = answer;
-                        input.dispatchEvent(new Event('input', { bubbles: true }));
-                        input.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                    break;
-                }
-            }
-
-            return true;
-        } catch (error) {
-            debug(`提交答案失败: ${error.message}`);
-            return false;
-        }
-    }
-
     public async startAutoAnswer(): Promise<void> {
         if (this.isProcessing) {
             debug('已有答题任务正在进行中');
@@ -488,7 +315,6 @@ export class AnswerHandler {
 
             // 发送请求
             const response = await provider.chat([
-                { role: 'system', content: '你是一个专业的答题助手，请严格按照指定格式回答题目。' },
                 { role: 'user', content: prompt }
             ]);
 
@@ -663,20 +489,6 @@ export class AnswerHandler {
                 debug(`选项索引超出范围：${letter} -> ${optionIndex}`);
             }
         }
-    }
-
-    private async processBlankAnswer(questionIndex: number, blankNumber: number, answer: string): Promise<void> {
-        const question = this.questions.find(q => q.index === questionIndex);
-        if (!question || !question.blanks) return;
-
-        // 找到对应的填空框
-        const blank = question.blanks.find(b => b.number === blankNumber);
-        if (!blank) return;
-
-        // 设置答案
-        blank.element.value = answer;
-        blank.element.dispatchEvent(new Event('input', { bubbles: true }));
-        blank.element.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     public stopAutoAnswer(): void {
