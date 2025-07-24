@@ -29,21 +29,18 @@ export class APIFactory {
             switch (config.apiType) {
                 case 'deepseek':
                     this.provider = new DeepSeekAPIProvider({
-                        apiKey,
-                        baseURL: 'https://api.deepseek.com/v1'
+                        apiKey
                     });
                     break;
                 case 'chatgpt':
                     this.provider = new ChatGPTAPIProvider({
-                        apiKey,
-                        baseURL: 'https://api.openai.com/v1'
+                        apiKey
                     });
                     break;
                 case 'moonshot':
                 default:
                     this.provider = new MoonshotAPIProvider({
-                        apiKey,
-                        baseURL: 'https://api.moonshot.cn/v1'
+                        apiKey
                     });
                     break;
             }
