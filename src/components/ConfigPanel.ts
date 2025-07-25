@@ -1,8 +1,8 @@
 import styles from '../styles/auto-answer.module.css';
-import { getConfig, saveConfig, debug, Config } from '../utils/config';
-import { AnswerHandler, Question } from '../utils/answer';
-import { APIFactory } from '../utils/api/factory';
-import { QuestionBankAPI } from '../utils/api/question-bank';
+import {Config, debug, getConfig, saveConfig} from '../utils/config';
+import {AnswerHandler, Question} from '../utils/answer';
+import {APIFactory} from '../utils/api/factory';
+import {QuestionBankAPI} from '../utils/api/question-bank';
 
 export class ConfigPanel {
     private panel: HTMLElement;
@@ -14,6 +14,51 @@ export class ConfigPanel {
         this.answerHandler = AnswerHandler.getInstance();
         this.currentConfig = getConfig();
         this.initEvents();
+    }
+
+    public async show(): Promise<void> {
+        this.panel.style.display = 'block';
+
+        // 加载已保存的配置
+        const config = getConfig();
+        (document.getElementById('api-type') as HTMLSelectElement).value = config.apiType;
+        (document.getElementById('api-key') as HTMLInputElement).value = config.apiKeys[config.apiType] || '';
+        (document.getElementById('custom-openai-url') as HTMLInputElement).value = config.customOpenAIUrl || '';
+        (document.getElementById('custom-openai-model') as HTMLInputElement).value = config.customOpenAIModel || '';
+
+        // 显示/隐藏自定义URL和模型输入框
+        this.toggleCustomUrlInput(config.apiType);
+
+        // 只有当API key不为空时才验证
+        if (config.apiKeys[config.apiType]) {
+            this.validateApiKey(config.apiKeys[config.apiType] || '', config.apiType);
+        }
+
+        // 扫描并显示题目
+        const questions = await this.answerHandler.scanQuestions();
+        this.updateQuestionGrid(questions);
+
+        // 添加选项点击的全局处理函数
+        (window as any).selectOption = (questionIndex: number, optionLetter: string) => {
+            (this.answerHandler as any).selectOption(questionIndex, optionLetter);
+        };
+
+        // 添加填空题输入框值更新的全局处理函数
+        (window as any).updateBlankValue = (questionIndex: number, blankNumber: number, value: string) => {
+            const question = this.answerHandler.getQuestions().find(q => q.index === questionIndex);
+            if (question?.blanks) {
+                const blank = question.blanks.find(b => b.number === blankNumber);
+                if (blank) {
+                    blank.element.value = value;
+                    blank.element.dispatchEvent(new Event('input', {bubbles: true}));
+                    blank.element.dispatchEvent(new Event('change', {bubbles: true}));
+                }
+            }
+        };
+    }
+
+    public hide(): void {
+        this.panel.style.display = 'none';
     }
 
     private createPanel(): HTMLElement {
@@ -111,11 +156,11 @@ export class ConfigPanel {
         const apiTypeSelect = document.getElementById('api-type') as HTMLSelectElement;
         const apiKeyInput = document.getElementById('api-key') as HTMLInputElement;
         const customUrlInput = document.getElementById('custom-openai-url') as HTMLInputElement;
-        
+
         apiTypeSelect.value = this.currentConfig.apiType;
         apiKeyInput.value = this.currentConfig.apiKeys[this.currentConfig.apiType] || '';
         customUrlInput.value = this.currentConfig.customOpenAIUrl || '';
-        
+
         // 初始化自定义URL输入框的显示状态
         this.toggleCustomUrlInput(this.currentConfig.apiType);
 
@@ -146,18 +191,18 @@ export class ConfigPanel {
         this.panel.querySelectorAll(`.${styles.tab}`).forEach(tab => {
             tab.addEventListener('click', () => {
                 // 移除所有标签页的active类
-                this.panel.querySelectorAll(`.${styles.tab}`).forEach(t => 
+                this.panel.querySelectorAll(`.${styles.tab}`).forEach(t =>
                     t.classList.remove(styles.active)
                 );
-                
+
                 // 移除所有内容区的active类
-                this.panel.querySelectorAll(`.${styles.tabContent}`).forEach(c => 
+                this.panel.querySelectorAll(`.${styles.tabContent}`).forEach(c =>
                     c.classList.remove(styles.active)
                 );
-                
+
                 // 添加当前标签页的active类
                 tab.classList.add(styles.active);
-                
+
                 // 添加对应内容区的active类
                 const tabId = (tab as HTMLElement).dataset.tab;
                 document.getElementById(`${tabId}-tab`)?.classList.add(styles.active);
@@ -215,16 +260,16 @@ export class ConfigPanel {
                     customOpenAIUrl: apiType === 'custom-openai' ? customUrl : this.currentConfig.customOpenAIUrl,
                     customOpenAIModel: apiType === 'custom-openai' ? (customModel || 'gpt-4.1') : this.currentConfig.customOpenAIModel
                 };
-                
+
                 // 临时保存配置用于测试
                 saveConfig(testConfig);
-                
+
                 // 重置API提供者以使用新配置
                 APIFactory.getInstance().resetProvider();
-                
+
                 const provider = APIFactory.getInstance().getProvider();
                 const response = await provider.chat([
-                    { role: 'user', content: '你好，这是一个测试消息。请回复"连接成功"。' }
+                    {role: 'user', content: '你好，这是一个测试消息。请回复"连接成功"。'}
                 ]);
 
                 if (response.data?.choices?.[0]?.message?.content.includes('连接成功')) {
@@ -238,7 +283,7 @@ export class ConfigPanel {
             } finally {
                 (button as HTMLButtonElement).textContent = '测试连接';
                 (button as HTMLButtonElement).disabled = false;
-                
+
                 // 恢复原始配置
                 saveConfig(this.currentConfig);
                 APIFactory.getInstance().resetProvider();
@@ -273,7 +318,7 @@ export class ConfigPanel {
                 customOpenAIUrl: apiType === 'custom-openai' ? customUrl : this.currentConfig.customOpenAIUrl,
                 customOpenAIModel: apiType === 'custom-openai' ? (customModel || 'gpt-4.1') : this.currentConfig.customOpenAIModel
             };
-            
+
             // 保存配置
             saveConfig(this.currentConfig);
 
@@ -356,7 +401,7 @@ export class ConfigPanel {
                 ...this.currentConfig,
                 questionBankToken: token
             };
-            
+
             // 保存配置
             saveConfig(this.currentConfig);
 
@@ -398,7 +443,7 @@ export class ConfigPanel {
     private toggleCustomUrlInput(apiType: string): void {
         const customUrlItem = document.getElementById('custom-url-item');
         const customModelItem = document.getElementById('custom-model-item');
-        
+
         if (customUrlItem && customModelItem) {
             if (apiType === 'custom-openai') {
                 customUrlItem.style.display = 'block';
@@ -436,47 +481,6 @@ export class ConfigPanel {
         return true;
     }
 
-    public async show(): Promise<void> {
-        this.panel.style.display = 'block';
-        
-        // 加载已保存的配置
-        const config = getConfig();
-        (document.getElementById('api-type') as HTMLSelectElement).value = config.apiType;
-        (document.getElementById('api-key') as HTMLInputElement).value = config.apiKeys[config.apiType] || '';
-        (document.getElementById('custom-openai-url') as HTMLInputElement).value = config.customOpenAIUrl || '';
-        (document.getElementById('custom-openai-model') as HTMLInputElement).value = config.customOpenAIModel || '';
-        
-        // 显示/隐藏自定义URL和模型输入框
-        this.toggleCustomUrlInput(config.apiType);
-        
-        // 只有当API key不为空时才验证
-        if (config.apiKeys[config.apiType]) {
-            this.validateApiKey(config.apiKeys[config.apiType] || '', config.apiType);
-        }
-
-        // 扫描并显示题目
-        const questions = await this.answerHandler.scanQuestions();
-        this.updateQuestionGrid(questions);
-
-        // 添加选项点击的全局处理函数
-        (window as any).selectOption = (questionIndex: number, optionLetter: string) => {
-            (this.answerHandler as any).selectOption(questionIndex, optionLetter);
-        };
-
-        // 添加填空题输入框值更新的全局处理函数
-        (window as any).updateBlankValue = (questionIndex: number, blankNumber: number, value: string) => {
-            const question = this.answerHandler.getQuestions().find(q => q.index === questionIndex);
-            if (question?.blanks) {
-                const blank = question.blanks.find(b => b.number === blankNumber);
-                if (blank) {
-                    blank.element.value = value;
-                    blank.element.dispatchEvent(new Event('input', { bubbles: true }));
-                    blank.element.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }
-        };
-    }
-
     private updateQuestionGrid(questions: Question[]) {
         const grid = this.panel.querySelector(`.${styles.questionGrid}`);
         if (!grid) return;
@@ -489,10 +493,6 @@ export class ConfigPanel {
             box.onclick = () => this.showQuestionDetail(question);
             grid.appendChild(box);
         });
-    }
-
-    public hide(): void {
-        this.panel.style.display = 'none';
     }
 
     private showQuestionDetail(question: Question): void {
@@ -509,10 +509,10 @@ export class ConfigPanel {
                     <h4 style="margin-bottom: 12px; color: #303133;">选项：</h4>
                     <ul style="list-style: none; padding-left: 0;">
                         ${question.options.map(option => {
-                            // 判断题特殊处理
-                            if (question.type === 'judgement') {
-                                const isCorrectOption = option.startsWith('A');
-                                return `
+            // 判断题特殊处理
+            if (question.type === 'judgement') {
+                const isCorrectOption = option.startsWith('A');
+                return `
                                     <li style="margin: 12px 0; padding: 8px 12px; background: #f5f7fa; border-radius: 4px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center;" 
                                         onmouseover="this.style.background='#ecf5ff'" 
                                         onmouseout="this.style.background='#f5f7fa'"
@@ -522,16 +522,16 @@ export class ConfigPanel {
                                         <span>${isCorrectOption ? '正确' : '错误'}</span>
                                     </li>
                                 `;
-                            }
-                            // 其他题型正常显示
-                            return `
+            }
+            // 其他题型正常显示
+            return `
                                 <li style="margin: 12px 0; padding: 8px 12px; background: #f5f7fa; border-radius: 4px; cursor: pointer; transition: all 0.3s;" 
                                     onmouseover="this.style.background='#ecf5ff'" 
                                     onmouseout="this.style.background='#f5f7fa'"
                                     onclick="window.selectOption(${question.index}, '${option.charAt(0)}')"
                                 >${option}</li>
                             `;
-                        }).join('')}
+        }).join('')}
                     </ul>
                 </div>
             ` : ''}

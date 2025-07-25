@@ -1,4 +1,4 @@
-import { BaseAPIProvider, APIProviderConfig } from './base';
+import {APIProviderConfig, BaseAPIProvider} from './base';
 
 export class DeepSeekAPIProvider extends BaseAPIProvider {
     protected getDefaultBaseURL(): string {

@@ -2,11 +2,11 @@ import check from './check.svg'
 import iconStyle from './sprite.module.css'
 
 const icons = {
-  check
+    check
 }
 
 const iconIds = Object.fromEntries(
-  Object.entries(icons).map(([name, value]) => [name, value.match(/<symbol id="([^"]+)"/)?.[1]])
+    Object.entries(icons).map(([name, value]) => [name, value.match(/<symbol id="([^"]+)"/)?.[1]])
 )
 
 const xmlns = 'http://www.w3.org/2000/svg'
@@ -21,10 +21,10 @@ svgSpriteElement.innerHTML = ['<defs>', ...Object.values(icons), '</defs>'].join
 document.body.appendChild(svgSpriteElement)
 
 export const renderIcon = (iconId: string, ...classList: string[]) => {
-  const svgElement = document.createElementNS(xmlns, 'svg')
-  const useElement = document.createElementNS(xmlns, 'use')
-  svgElement.classList.add(iconStyle.icon, ...classList)
-  useElement.setAttributeNS(xlink, 'href', `#${iconIds[iconId]}`)
-  svgElement.appendChild(useElement)
-  return svgElement
+    const svgElement = document.createElementNS(xmlns, 'svg')
+    const useElement = document.createElementNS(xmlns, 'use')
+    svgElement.classList.add(iconStyle.icon, ...classList)
+    useElement.setAttributeNS(xlink, 'href', `#${iconIds[iconId]}`)
+    svgElement.appendChild(useElement)
+    return svgElement
 }

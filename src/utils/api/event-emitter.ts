@@ -16,13 +16,13 @@ export class EventEmitter {
 
     public off(event: string, callback: EventCallback): void {
         if (!this.events.has(event)) return;
-        
+
         const callbacks = this.events.get(event)!;
         const index = callbacks.indexOf(callback);
         if (index !== -1) {
             callbacks.splice(index, 1);
         }
-        
+
         if (callbacks.length === 0) {
             this.events.delete(event);
         }
@@ -30,7 +30,7 @@ export class EventEmitter {
 
     protected emit(event: string, ...args: any[]): void {
         if (!this.events.has(event)) return;
-        
+
         this.events.get(event)!.forEach(callback => {
             try {
                 callback(...args);

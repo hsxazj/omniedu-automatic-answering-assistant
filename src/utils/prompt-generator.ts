@@ -1,6 +1,31 @@
-import { Question } from './answer';
+import {Question} from './answer';
 
 export class PromptGenerator {
+    public static generatePrompt(questions: Question[]): string {
+        const questionsByType = questions.reduce((acc, q) => {
+            if (!acc[q.type]) {
+                acc[q.type] = [];
+            }
+            acc[q.type].push(q);
+            return acc;
+        }, {} as Record<string, Question[]>);
+
+        let prompt = '请根据题型回答以下题目。请注意：准确性比速度更重要，如果不确定某题的答案，可以跳过该题。\n\n';
+
+        // 添加题型说明
+        prompt += this.getQuestionTypeInstructions() + '\n\n';
+
+        // 按题型分组添加题目
+        for (const [type, questionsOfType] of Object.entries(questionsByType)) {
+            if (questionsOfType.length > 0) {
+                prompt += `${this.getTypeTitle(type)}：\n`;
+                prompt += this.formatQuestions(questionsOfType) + '\n\n';
+            }
+        }
+
+        return prompt;
+    }
+
     private static formatQuestions(questions: Question[]): string {
         return questions.map(q => {
             let questionText = `${q.index}. ${q.content}`;
@@ -65,31 +90,6 @@ export class PromptGenerator {
             default:
                 return type;
         }
-    }
-
-    public static generatePrompt(questions: Question[]): string {
-        const questionsByType = questions.reduce((acc, q) => {
-            if (!acc[q.type]) {
-                acc[q.type] = [];
-            }
-            acc[q.type].push(q);
-            return acc;
-        }, {} as Record<string, Question[]>);
-
-        let prompt = '请根据题型回答以下题目。请注意：准确性比速度更重要，如果不确定某题的答案，可以跳过该题。\n\n';
-        
-        // 添加题型说明
-        prompt += this.getQuestionTypeInstructions() + '\n\n';
-
-        // 按题型分组添加题目
-        for (const [type, questionsOfType] of Object.entries(questionsByType)) {
-            if (questionsOfType.length > 0) {
-                prompt += `${this.getTypeTitle(type)}：\n`;
-                prompt += this.formatQuestions(questionsOfType) + '\n\n';
-            }
-        }
-
-        return prompt;
     }
 }
 

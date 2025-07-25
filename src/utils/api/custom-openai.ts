@@ -1,5 +1,5 @@
-import { BaseAPIProvider, APIProviderConfig } from './base';
-import { getConfig } from '../config';
+import {APIProviderConfig, BaseAPIProvider} from './base';
+import {getConfig} from '../config';
 
 export class CustomOpenAIAPIProvider extends BaseAPIProvider {
     protected getDefaultBaseURL(): string {

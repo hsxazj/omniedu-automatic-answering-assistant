@@ -1,4 +1,4 @@
-import { EventEmitter } from './event-emitter';
+import {EventEmitter} from './event-emitter';
 
 export interface APIConfig {
     apiKey: string;
@@ -40,32 +40,6 @@ export abstract class BaseAPIProvider extends EventEmitter {
         super();
         this.apiKey = config.apiKey;
         this.baseURL = config.baseURL || this.getDefaultBaseURL();
-    }
-
-    protected abstract getDefaultBaseURL(): string;
-    protected abstract getDefaultHeaders(): Record<string, string>;
-    protected abstract getConfig(): APIProviderConfig;
-
-    protected async customFetch(endpoint: string, options: { method: string; headers: Record<string, string>; body?: any }): Promise<any> {
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                method: options.method,
-                url: `${this.baseURL}${endpoint}`,
-                headers: options.headers,
-                data: options.body ? JSON.stringify(options.body) : undefined,
-                responseType: 'json',
-                onload: function(response: any) {
-                    if (response.status >= 200 && response.status < 300) {
-                        resolve(response.response);
-                    } else {
-                        reject(new Error(`HTTP Error: ${response.status} ${response.statusText}`));
-                    }
-                },
-                onerror: function(error: any) {
-                    reject(new Error('Network Error: ' + error.error));
-                }
-            });
-        });
     }
 
     public async chat(messages: ChatMessage[]): Promise<APIResponse> {
@@ -123,5 +97,37 @@ export abstract class BaseAPIProvider extends EventEmitter {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`API Error: ${errorMessage}`);
         }
+    }
+
+    protected abstract getDefaultBaseURL(): string;
+
+    protected abstract getDefaultHeaders(): Record<string, string>;
+
+    protected abstract getConfig(): APIProviderConfig;
+
+    protected async customFetch(endpoint: string, options: {
+        method: string;
+        headers: Record<string, string>;
+        body?: any
+    }): Promise<any> {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: options.method,
+                url: `${this.baseURL}${endpoint}`,
+                headers: options.headers,
+                data: options.body ? JSON.stringify(options.body) : undefined,
+                responseType: 'json',
+                onload: function (response: any) {
+                    if (response.status >= 200 && response.status < 300) {
+                        resolve(response.response);
+                    } else {
+                        reject(new Error(`HTTP Error: ${response.status} ${response.statusText}`));
+                    }
+                },
+                onerror: function (error: any) {
+                    reject(new Error('Network Error: ' + error.error));
+                }
+            });
+        });
     }
 }

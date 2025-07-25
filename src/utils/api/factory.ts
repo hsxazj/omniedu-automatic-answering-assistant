@@ -1,17 +1,18 @@
-import { BaseAPIProvider } from './base';
-import { MoonshotAPIProvider } from './moonshot';
-import { DeepSeekAPIProvider } from './deepseek';
-import { ChatGPTAPIProvider } from './chatgpt';
-import { CustomOpenAIAPIProvider } from './custom-openai';
-import { QuestionBankAPI } from './question-bank';
-import { getConfig } from '../config';
+import {BaseAPIProvider} from './base';
+import {MoonshotAPIProvider} from './moonshot';
+import {DeepSeekAPIProvider} from './deepseek';
+import {ChatGPTAPIProvider} from './chatgpt';
+import {CustomOpenAIAPIProvider} from './custom-openai';
+import {QuestionBankAPI} from './question-bank';
+import {getConfig} from '../config';
 
 export class APIFactory {
     private static instance: APIFactory;
     private provider: BaseAPIProvider | null = null;
     private questionBank: QuestionBankAPI | null = null;
 
-    private constructor() {}
+    private constructor() {
+    }
 
     public static getInstance(): APIFactory {
         if (!APIFactory.instance) {
@@ -35,7 +36,7 @@ export class APIFactory {
         if (!this.provider) {
             const config = getConfig();
             const apiKey = config.apiKeys[config.apiType];
-            
+
             if (!apiKey) {
                 throw new Error(`未设置 ${config.apiType} 的API密钥`);
             }

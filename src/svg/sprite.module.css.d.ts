@@ -1,4 +1,4 @@
 declare const styles: {
-  readonly icon: string;
+    readonly icon: string;
 };
 export default styles;

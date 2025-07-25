@@ -1,6 +1,6 @@
-import { debug } from './config';
-import { PromptGenerator } from './prompt-generator';
-import { APIFactory } from './api/factory';
+import {debug} from './config';
+import {PromptGenerator} from './prompt-generator';
+import {APIFactory} from './api/factory';
 
 export interface Question {
     index: number;
@@ -25,32 +25,32 @@ function cleanText(text: string): string {
         .replace(/['']/g, "'")
         .replace(/[（）]/g, "()")
         .replace(/[【】]/g, "[]");
-    
+
     // 2. 移除（数字分）格式
     cleaned = cleaned.replace(/[（(]\s*\d+\s*分\s*[）)]/g, '');
-    
+
     // 3. 处理括号
     let firstLeftBracket = cleaned.indexOf('(');
     let lastRightBracket = cleaned.lastIndexOf(')');
-    
+
     if (firstLeftBracket !== -1 && lastRightBracket !== -1) {
         // 提取括号前、括号中、括号后的内容
         let beforeBracket = cleaned.substring(0, firstLeftBracket);
         let afterBracket = cleaned.substring(lastRightBracket + 1);
-        
+
         // 清理括号中的内容（移除其他括号）
         let insideBracket = cleaned.substring(firstLeftBracket + 1, lastRightBracket)
             .replace(/[()（）]/g, '');
-        
+
         // 重新组合文本
         cleaned = beforeBracket + '(' + insideBracket + ')' + afterBracket;
     }
-    
+
     // 4. 最后的清理
     cleaned = cleaned.replace(/\s+/g, ' ').trim() // 再次清理多余空格
-                    .replace(/\(\s+/g, '(') // 清理左括号后的空格
-                    .replace(/\s+\)/g, ')'); // 清理右括号前的空格
-    
+        .replace(/\(\s+/g, '(') // 清理左括号后的空格
+        .replace(/\s+\)/g, ')'); // 清理右括号前的空格
+
     return cleaned;
 }
 
@@ -59,7 +59,8 @@ export class AnswerHandler {
     private questions: Question[] = [];
     private isProcessing: boolean = false;
 
-    private constructor() {}
+    private constructor() {
+    }
 
     public static getInstance(): AnswerHandler {
         if (!AnswerHandler.instance) {
@@ -71,7 +72,7 @@ export class AnswerHandler {
     public async scanQuestions(): Promise<Question[]> {
         try {
             const questions: Question[] = [];
-            
+
             // 用于收集每种题型的题目
             const questionsByType: {
                 single: string[];
@@ -84,7 +85,7 @@ export class AnswerHandler {
                 judgement: [],
                 text: []
             };
-            
+
             // 首先找到题目列表容器
             const groupList = document.querySelector('.group-list.scrollbar');
             if (!groupList) {
@@ -105,7 +106,7 @@ export class AnswerHandler {
                 // 获取题型标题
                 const titleEl = group.querySelector('.title');
                 const groupTitle = titleEl?.textContent?.trim() || '';
-                
+
                 // 解析题型信息
                 let questionType: Question['type'] = 'single'; // 默认为单选题
                 let questionCount = 0;
@@ -117,7 +118,7 @@ export class AnswerHandler {
                     const [_, typeText, count, score] = titleInfo;
                     questionCount = parseInt(count);
                     totalScore = parseInt(score);
-                    
+
                     // 根据题型文本判断类型
                     if (typeText.includes('单选')) {
                         questionType = 'single';
@@ -146,7 +147,7 @@ export class AnswerHandler {
                                 const codeSpans = p.querySelectorAll('span[style*="background-color"]');
                                 if (codeSpans.length > 0) {
                                     // 如果有代码片段，替换原始HTML中的空格实体
-                                    return Array.from(codeSpans).map(span => 
+                                    return Array.from(codeSpans).map(span =>
                                         span.innerHTML
                                             .replace(/&nbsp;/g, ' ')
                                             .trim()
@@ -172,7 +173,7 @@ export class AnswerHandler {
                     // 解析选项
                     const optionList = questionEl.querySelector('.option-list');
                     const options: string[] = [];
-                    
+
                     if (optionList) {
                         const optionElements = optionList.querySelectorAll('.option');
                         optionElements.forEach(optionEl => {
@@ -196,10 +197,10 @@ export class AnswerHandler {
                     // 如果是判断题，检测正确选项是否在前
                     if (questionType === 'judgement' && options.length === 2) {
                         const firstOptionText = options[0].replace(/^[A-Z]\.\s*/, '').toLowerCase().trim();
-                        question.answer = firstOptionText === '正确' || 
-                                             firstOptionText === 'true' || 
-                                             firstOptionText === '对' || 
-                                             firstOptionText === '√';
+                        question.answer = firstOptionText === '正确' ||
+                            firstOptionText === 'true' ||
+                            firstOptionText === '对' ||
+                            firstOptionText === '√';
                         debug(`判断题 ${question.index} 的正确选项在${question.answer ? '前' : '后'}`);
                     }
 
@@ -209,12 +210,12 @@ export class AnswerHandler {
                         if (textQue?.classList.contains('text-que')) {
                             const blanks: BlankInput[] = [];
                             const opts = textQue.querySelectorAll('.opt');
-                            
+
                             opts.forEach(opt => {
                                 const numberSpan = opt.querySelector('span');
                                 const inputWrapper = opt.querySelector('.el-input.el-input--small.el-input--suffix');
                                 const input = inputWrapper?.querySelector('.el-input__inner') as HTMLInputElement;
-                                
+
                                 if (numberSpan && input) {
                                     blanks.push({
                                         number: parseInt(numberSpan.textContent?.replace(/[^\d]/g, '') || '0'),
@@ -222,7 +223,7 @@ export class AnswerHandler {
                                     });
                                 }
                             });
-                            
+
                             if (blanks.length > 0) {
                                 question.blanks = blanks;
                             }
@@ -230,35 +231,35 @@ export class AnswerHandler {
                     }
 
                     questions.push(question);
-                    
+
                     // 将题目添加到对应题型的列表中
                     questionsByType[questionType].push(`${question.index}. ${content}`);
                 });
             });
 
             this.questions = questions;
-            
+
             // 按题型打印题目列表
             if (questionsByType.single.length > 0) {
                 debug('单选题：');
                 questionsByType.single.forEach(q => debug(q));
             }
-            
+
             if (questionsByType.multiple.length > 0) {
                 debug('多选题：');
                 questionsByType.multiple.forEach(q => debug(q));
             }
-            
+
             if (questionsByType.judgement.length > 0) {
                 debug('判断题：');
                 questionsByType.judgement.forEach(q => debug(q));
             }
-            
+
             if (questionsByType.text.length > 0) {
                 debug('填空/简答题：');
                 questionsByType.text.forEach(q => debug(q));
             }
-            
+
             debug(`共扫描到 ${questions.length} 个题目`);
             return questions;
         } catch (error) {
@@ -285,22 +286,22 @@ export class AnswerHandler {
 
             // 获取API工厂实例
             const apiFactory = APIFactory.getInstance();
-            
+
             // 尝试使用题库
             const questionBank = apiFactory.getQuestionBank();
             const answers: Record<string, string> = {};
-            
+
             if (questionBank) {
                 debug('检测到题库配置，开始测试题库连接');
-                
+
                 // 测试题库连接
                 const isConnected = await questionBank.testConnection();
-                
+
                 if (!isConnected) {
                     debug('题库连接测试失败，跳过题库搜题');
                 } else {
                     debug('题库连接测试成功，开始使用题库查询答案');
-                    
+
                     // 先尝试从题库获取答案
                     for (const question of questions) {
                         try {
@@ -316,11 +317,11 @@ export class AnswerHandler {
                             debug(`题库查询失败 - 题目 ${question.index}: ${error.message}`);
                         }
                     }
-                    
+
                     // 统计题库匹配结果
                     const matchedCount = Object.keys(answers).length;
                     debug(`题库匹配结果：共 ${questions.length} 题，匹配成功 ${matchedCount} 题`);
-                    
+
                     // 如果所有题目都匹配到了答案，直接处理
                     if (matchedCount === questions.length) {
                         debug('所有题目都在题库中找到答案，开始填写');
@@ -328,7 +329,7 @@ export class AnswerHandler {
                         debug('题库答题完成');
                         return;
                     }
-                    
+
                     // 如果有部分题目匹配到答案
                     if (matchedCount > 0) {
                         debug('部分题目在题库中找到答案，继续使用AI回答剩余题目');
@@ -340,7 +341,7 @@ export class AnswerHandler {
             const remainingQuestions = questions.filter(q => !answers[q.index.toString()]);
             if (remainingQuestions.length > 0) {
                 debug(`使用AI回答${remainingQuestions.length}道题目`);
-                
+
                 // 生成提示词
                 const prompt = PromptGenerator.generatePrompt(remainingQuestions);
                 debug('生成的提示词：\n' + prompt);
@@ -350,7 +351,7 @@ export class AnswerHandler {
 
                 // 发送请求
                 const response = await provider.chat([
-                    { role: 'user', content: prompt }
+                    {role: 'user', content: prompt}
                 ]);
 
                 if (response.data?.choices?.[0]?.message?.content) {
@@ -361,7 +362,7 @@ export class AnswerHandler {
                     try {
                         const cleanedResponse = aiAnswer.replace(/^```json\n|\n```$/g, '');
                         const aiAnswers = JSON.parse(cleanedResponse);
-                        
+
                         // 合并题库答案和AI答案
                         Object.assign(answers, aiAnswers);
                     } catch (error) {
@@ -384,8 +385,17 @@ export class AnswerHandler {
         }
     }
 
+    public stopAutoAnswer(): void {
+        this.isProcessing = false;
+        debug('停止自动答题');
+    }
+
+    public getQuestions(): Question[] {
+        return this.questions;
+    }
+
     private async processAIResponse(response: string): Promise<void> {
-        try {            
+        try {
             // 尝试解析JSON格式的答案
             let answers: Record<string, string>;
             try {
@@ -396,7 +406,7 @@ export class AnswerHandler {
                 // 过滤掉不在当前题目列表中的答案
                 const validAnswers: Record<string, string> = {};
                 const currentQuestionIndexes = this.questions.map(q => q.index.toString());
-                
+
                 for (const [index, answer] of Object.entries(answers)) {
                     if (currentQuestionIndexes.includes(index)) {
                         validAnswers[index] = answer;
@@ -416,7 +426,7 @@ export class AnswerHandler {
                 });
             }
             debug('解析后的答案对象：\n' + JSON.stringify(answers, null, 2));
-            
+
             // 遍历所有答案
             for (const [questionNumber, answer] of Object.entries(answers)) {
                 const index = parseInt(questionNumber);
@@ -437,11 +447,11 @@ export class AnswerHandler {
                 if (question.type === 'judgement') {
                     // 判断题处理
                     const cleanAnswer = answer.toLowerCase().trim();
-                    const isCorrect = cleanAnswer === '正确' || 
-                                    cleanAnswer === 'true' || 
-                                    cleanAnswer === '对' || 
-                                    cleanAnswer === '√' ||
-                                    cleanAnswer === 'a';
+                    const isCorrect = cleanAnswer === '正确' ||
+                        cleanAnswer === 'true' ||
+                        cleanAnswer === '对' ||
+                        cleanAnswer === '√' ||
+                        cleanAnswer === 'a';
 
                     // 获取当前题目的选项
                     const options = question.element.querySelectorAll('.option');
@@ -451,21 +461,21 @@ export class AnswerHandler {
                     }
 
                     // 解析每个选项的文本
-                    const optionTexts = Array.from(options).map(opt => 
+                    const optionTexts = Array.from(options).map(opt =>
                         opt.textContent?.trim().toLowerCase() || ''
                     );
 
                     // 判断第一个选项是否为"正确"
-                    const firstOptionCorrect = optionTexts[0].includes('正确') || 
-                                            optionTexts[0].includes('true') || 
-                                            optionTexts[0].includes('对') || 
-                                            optionTexts[0].includes('√');
+                    const firstOptionCorrect = optionTexts[0].includes('正确') ||
+                        optionTexts[0].includes('true') ||
+                        optionTexts[0].includes('对') ||
+                        optionTexts[0].includes('√');
 
                     debug(`判断题 ${index} 选项顺序：${firstOptionCorrect ? '"正确"在前' : '"错误"在前'}`);
                     debug(`判断题 ${index} 答案解析：${isCorrect ? '正确' : '错误'}`);
 
                     // 根据答案和当前题目的选项顺序决定点击哪个选项
-                    const targetIndex = firstOptionCorrect ? 
+                    const targetIndex = firstOptionCorrect ?
                         (isCorrect ? 1 : 2) : // 正确在前：正确选1，错误选2
                         (isCorrect ? 2 : 1);  // 错误在前：正确选2，错误选1
 
@@ -485,8 +495,8 @@ export class AnswerHandler {
                         for (let i = 0; i < question.blanks.length && i < answers.length; i++) {
                             const blank = question.blanks[i];
                             blank.element.value = answers[i];
-                            blank.element.dispatchEvent(new Event('input', { bubbles: true }));
-                            blank.element.dispatchEvent(new Event('change', { bubbles: true }));
+                            blank.element.dispatchEvent(new Event('input', {bubbles: true}));
+                            blank.element.dispatchEvent(new Event('change', {bubbles: true}));
                         }
                     } else {
                         // 处理简答题
@@ -497,8 +507,8 @@ export class AnswerHandler {
                             if (textarea) {
                                 debug('找到简答题的textarea元素');
                                 textarea.value = answer;
-                                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                                textarea.dispatchEvent(new Event('change', { bubbles: true }));
+                                textarea.dispatchEvent(new Event('input', {bubbles: true}));
+                                textarea.dispatchEvent(new Event('change', {bubbles: true}));
                             } else {
                                 debug('未找到简答题的textarea元素');
                             }
@@ -523,8 +533,8 @@ export class AnswerHandler {
         const question = this.questions.find(q => q.index === questionIndex);
         if (!question || !question.options) {
             debug(`处理选项答案失败：未找到题目 ${questionIndex} 或题目没有选项`);
-                return;
-            }
+            return;
+        }
 
         debug(`处理第 ${questionIndex} 题选项答案：\n题型：${question.type}\n答案：${answer}\n可用选项：${question.options.join(', ')}`);
 
@@ -540,9 +550,9 @@ export class AnswerHandler {
             // 处理单选题格式 "A" 或其他格式
             answerLetters = [answer.toUpperCase().charAt(0)];
         }
-        
+
         debug(`答案字母：${answerLetters.join(', ')}`);
-        
+
         for (const letter of answerLetters) {
             // 找到对应选项的索引（A=0, B=1, C=2, D=3）
             const optionIndex = letter.trim().charAt(0).charCodeAt(0) - 'A'.charCodeAt(0);
@@ -558,14 +568,5 @@ export class AnswerHandler {
                 debug(`选项索引超出范围：${letter} -> ${optionIndex}`);
             }
         }
-    }
-
-    public stopAutoAnswer(): void {
-        this.isProcessing = false;
-        debug('停止自动答题');
-    }
-
-    public getQuestions(): Question[] {
-        return this.questions;
     }
 }
