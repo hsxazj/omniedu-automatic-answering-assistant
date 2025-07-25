@@ -9,13 +9,7 @@ export interface Question {
     type: 'single' | 'multiple' | 'text' | 'judgement';
     answer?: string;
     element: HTMLElement;
-    blanks?: BlankInput[]; // 新增填空题答题框信息
-}
-
-interface AnswerResult {
-    question: string;
-    answer: string;
-    confidence: number;
+    blanks?: BlankInput[];
 }
 
 interface BlankInput {
@@ -58,30 +52,6 @@ function cleanText(text: string): string {
                     .replace(/\s+\)/g, ')'); // 清理右括号前的空格
     
     return cleaned;
-}
-
-// 计算两个字符串的相似度
-function stringSimilarity(str1: string, str2: string): number {
-    const len1 = str1.length;
-    const len2 = str2.length;
-    const matrix = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));
-
-    for (let i = 0; i <= len1; i++) matrix[i][0] = i;
-    for (let j = 0; j <= len2; j++) matrix[0][j] = j;
-
-    for (let i = 1; i <= len1; i++) {
-        for (let j = 1; j <= len2; j++) {
-            const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-            matrix[i][j] = Math.min(
-                matrix[i - 1][j] + 1,
-                matrix[i][j - 1] + 1,
-                matrix[i - 1][j - 1] + cost
-            );
-        }
-    }
-
-    const maxLen = Math.max(len1, len2);
-    return (maxLen - matrix[len1][len2]) / maxLen;
 }
 
 export class AnswerHandler {
@@ -223,6 +193,16 @@ export class AnswerHandler {
                         options: options.length > 0 ? options : undefined
                     };
 
+                    // 如果是判断题，检测正确选项是否在前
+                    if (questionType === 'judgement' && options.length === 2) {
+                        const firstOptionText = options[0].replace(/^[A-Z]\.\s*/, '').toLowerCase().trim();
+                        question.answer = firstOptionText === '正确' || 
+                                             firstOptionText === 'true' || 
+                                             firstOptionText === '对' || 
+                                             firstOptionText === '√';
+                        debug(`判断题 ${question.index} 的正确选项在${question.answer ? '前' : '后'}`);
+                    }
+
                     // 如果是填空题，识别答题框
                     if (questionType === 'text') {
                         const textQue = questionEl.querySelector('.que-title')?.nextElementSibling;
@@ -288,181 +268,6 @@ export class AnswerHandler {
         }
     }
 
-    private detectQuestionType(container: HTMLElement, question: Question): void {
-        // 检查是否为判断题
-        const content = question.content.toLowerCase();
-        if (content.includes('判断') || content.includes('正确') || content.includes('错误')) {
-            question.type = 'judgement';
-            return;
-        }
-
-        // 检查是否为填空题
-        if (container.querySelector('input[type="text"], textarea')) {
-            question.type = 'text';
-            return;
-        }
-
-        // 检查是否为多选题
-        if (container.querySelector('input[type="checkbox"]')) {
-            question.type = 'multiple';
-            return;
-        }
-
-        // 检查选项数量
-        const optionCount = container.querySelectorAll('input[type="radio"]').length;
-        if (optionCount > 0) {
-            question.type = 'single';
-            return;
-        }
-
-        // 通过选项文本判断
-        const options = container.querySelectorAll('.option, .answer-option');
-        if (options.length > 0) {
-            let isMultiple = false;
-            options.forEach(option => {
-                const text = option.textContent || '';
-                if (text.includes('多选') || text.match(/[A-Z]{2,}/)) {
-                    isMultiple = true;
-                }
-            });
-            question.type = isMultiple ? 'multiple' : 'single';
-        }
-    }
-
-    private extractOptions(container: HTMLElement): string[] {
-        const options: string[] = [];
-        
-        // 扩展选项的选择器
-        const optionElements = container.querySelectorAll(
-            '.option, .answer-option, label, ' +
-            '.choice, .option-item, .answer-item, ' +
-            '.option-wrapper, .answer-wrapper, .optionUl li'
-        );
-        
-        optionElements.forEach(element => {
-            // 调试：高亮选项
-            element.classList.add('debug-highlight-option');
-            
-            const text = cleanText(element.textContent || '');
-            if (text && !options.includes(text)) {
-                // 移除选项标记（A. B. C.等）
-                const cleanOption = text.replace(/^[A-Z][.、\s]?/i, '').trim();
-                if (cleanOption) {
-                    options.push(cleanOption);
-                }
-            }
-        });
-
-        return options;
-    }
-
-    public async getAnswer(question: Question): Promise<AnswerResult | null> {
-        try {
-            const config = {
-                model: "gpt-3.5-turbo",
-                messages: [{
-                    role: "system",
-                    content: "你是一个专业的答题助手。请根据题目内容和选项，给出最可能的答案。"
-                }, {
-                    role: "user",
-                    content: `题目类型: ${question.type}\n题目内容: ${question.content}\n${
-                        question.options ? '选项: ' + question.options.join(' | ') : ''
-                    }`
-                }]
-            };
-
-            const response = await fetch('https://api.example.com/answer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(config)
-            });
-
-            if (!response.ok) {
-                throw new Error('API请求失败');
-            }
-
-            const result = await response.json();
-            
-            // 如果有选项，计算答案与选项的相似度
-            let confidence = 1;
-            if (question.options) {
-                const similarities = question.options.map(option => 
-                    stringSimilarity(result.answer.toLowerCase(), option.toLowerCase())
-                );
-                confidence = Math.max(...similarities);
-            }
-
-            return {
-                question: question.content,
-                answer: result.answer,
-                confidence
-            };
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            debug(`获取答案失败: ${errorMessage}`);
-            return null;
-        }
-    }
-
-    public async submitAnswer(question: Question, answer: string): Promise<boolean> {
-        try {
-            switch (question.type) {
-                case 'single':
-                case 'multiple': {
-                    if (!question.options) return false;
-                    
-                    const answers = answer.split(',').map(a => a.trim());
-                    const options = question.element.querySelectorAll('input[type="radio"], input[type="checkbox"]');
-                    
-                    options.forEach((input, index) => {
-                        if (index < question.options!.length) {
-                            const optionText = question.options![index];
-                            const shouldCheck = answers.some(ans => 
-                                stringSimilarity(ans.toLowerCase(), optionText.toLowerCase()) > 0.8
-                            );
-                            
-                            if (shouldCheck) {
-                                (input as HTMLInputElement).checked = true;
-                                input.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        }
-                    });
-                    break;
-                }
-                case 'judgement': {
-                    const trueWords = ['正确', '是', '对', 'true', 't', '√'];
-                    const isTrue = trueWords.some(word => 
-                        answer.toLowerCase().includes(word.toLowerCase())
-                    );
-                    
-                    const options = question.element.querySelectorAll('input[type="radio"]');
-                    if (options.length >= 2) {
-                        (options[isTrue ? 0 : 1] as HTMLInputElement).checked = true;
-                        options[isTrue ? 0 : 1].dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                    break;
-                }
-                case 'text': {
-                    const input = question.element.querySelector('input[type="text"], textarea');
-                    if (input) {
-                        (input as HTMLInputElement).value = answer;
-                        input.dispatchEvent(new Event('input', { bubbles: true }));
-                        input.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                    break;
-                }
-            }
-
-            return true;
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            debug(`提交答案失败: ${errorMessage}`);
-            return false;
-        }
-    }
-
     public async startAutoAnswer(): Promise<void> {
         if (this.isProcessing) {
             debug('已有答题任务正在进行中');
@@ -478,33 +283,98 @@ export class AnswerHandler {
                 throw new Error('未找到任何题目');
             }
 
-            // 使用批量处理方式
-            debug('使用批量处理方式进行答题');
-            
-            // 生成提示词
-            const prompt = PromptGenerator.generatePrompt(questions);
-            debug('生成的提示词：\n' + prompt);
-
-            // 获取API提供者
+            // 获取API工厂实例
             const apiFactory = APIFactory.getInstance();
-            const provider = apiFactory.getProvider();
-
-            // 发送请求
-            const response = await provider.chat([
-                { role: 'system', content: '你是一个专业的答题助手，请严格按照指定格式回答题目。' },
-                { role: 'user', content: prompt }
-            ]);
-
-            if (response.data?.choices?.[0]?.message?.content) {
-                const answer = response.data.choices[0].message.content;
-                debug('收到AI回答：\n' + answer);
-
-                // 解析答案并填写
-                await this.processAIResponse(answer);
-            } else {
-                throw new Error('API响应格式错误');
+            
+            // 尝试使用题库
+            const questionBank = apiFactory.getQuestionBank();
+            const answers: Record<string, string> = {};
+            
+            if (questionBank) {
+                debug('检测到题库配置，开始测试题库连接');
+                
+                // 测试题库连接
+                const isConnected = await questionBank.testConnection();
+                
+                if (!isConnected) {
+                    debug('题库连接测试失败，跳过题库搜题');
+                } else {
+                    debug('题库连接测试成功，开始使用题库查询答案');
+                    
+                    // 先尝试从题库获取答案
+                    for (const question of questions) {
+                        try {
+                            const result = await questionBank.query(
+                                question.content,
+                                question.options
+                            );
+                            if (result) {
+                                debug(`题库匹配成功 - 题目 ${question.index}: ${result.answer}`);
+                                answers[question.index.toString()] = result.answer;
+                            }
+                        } catch (error) {
+                            debug(`题库查询失败 - 题目 ${question.index}: ${error.message}`);
+                        }
+                    }
+                    
+                    // 统计题库匹配结果
+                    const matchedCount = Object.keys(answers).length;
+                    debug(`题库匹配结果：共 ${questions.length} 题，匹配成功 ${matchedCount} 题`);
+                    
+                    // 如果所有题目都匹配到了答案，直接处理
+                    if (matchedCount === questions.length) {
+                        debug('所有题目都在题库中找到答案，开始填写');
+                        await this.processAIResponse(JSON.stringify(answers));
+                        debug('题库答题完成');
+                        return;
+                    }
+                    
+                    // 如果有部分题目匹配到答案
+                    if (matchedCount > 0) {
+                        debug('部分题目在题库中找到答案，继续使用AI回答剩余题目');
+                    }
+                }
             }
 
+            // 对于未匹配到答案的题目，使用AI回答
+            const remainingQuestions = questions.filter(q => !answers[q.index.toString()]);
+            if (remainingQuestions.length > 0) {
+                debug(`使用AI回答${remainingQuestions.length}道题目`);
+                
+                // 生成提示词
+                const prompt = PromptGenerator.generatePrompt(remainingQuestions);
+                debug('生成的提示词：\n' + prompt);
+
+                // 获取API提供者
+                const provider = apiFactory.getProvider();
+
+                // 发送请求
+                const response = await provider.chat([
+                    { role: 'user', content: prompt }
+                ]);
+
+                if (response.data?.choices?.[0]?.message?.content) {
+                    const aiAnswer = response.data.choices[0].message.content;
+                    debug('收到AI回答：\n' + aiAnswer);
+
+                    // 解析AI答案
+                    try {
+                        const cleanedResponse = aiAnswer.replace(/^```json\n|\n```$/g, '');
+                        const aiAnswers = JSON.parse(cleanedResponse);
+                        
+                        // 合并题库答案和AI答案
+                        Object.assign(answers, aiAnswers);
+                    } catch (error) {
+                        debug('解析AI回答失败：' + error.message);
+                        throw error;
+                    }
+                } else {
+                    throw new Error('API响应格式错误');
+                }
+            }
+
+            // 处理所有答案
+            await this.processAIResponse(JSON.stringify(answers));
             debug('自动答题完成');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -515,16 +385,26 @@ export class AnswerHandler {
     }
 
     private async processAIResponse(response: string): Promise<void> {
-        try {
-            // 添加原始响应的日志
-            debug('原始AI响应：\n' + response);
-            
+        try {            
             // 尝试解析JSON格式的答案
             let answers: Record<string, string>;
             try {
                 // 首先尝试移除markdown代码块标记
                 const cleanedResponse = response.replace(/^```json\n|\n```$/g, '');
                 answers = JSON.parse(cleanedResponse);
+
+                // 过滤掉不在当前题目列表中的答案
+                const validAnswers: Record<string, string> = {};
+                const currentQuestionIndexes = this.questions.map(q => q.index.toString());
+                
+                for (const [index, answer] of Object.entries(answers)) {
+                    if (currentQuestionIndexes.includes(index)) {
+                        validAnswers[index] = answer;
+                    } else {
+                        debug(`跳过非当前题目的答案：题号 ${index}`);
+                    }
+                }
+                answers = validAnswers;
             } catch (e) {
                 // 如果不是JSON格式，尝试解析普通文本格式
                 answers = {};
@@ -555,36 +435,46 @@ export class AnswerHandler {
 
                 // 根据题目类型处理答案
                 if (question.type === 'judgement') {
-                    // 判断题需要先检查选项顺序
-                    const options = question.element.querySelectorAll('.option');
-                    let correctFirst = true; // 默认认为"正确"在前
+                    // 判断题处理
+                    const cleanAnswer = answer.toLowerCase().trim();
+                    const isCorrect = cleanAnswer === '正确' || 
+                                    cleanAnswer === 'true' || 
+                                    cleanAnswer === '对' || 
+                                    cleanAnswer === '√' ||
+                                    cleanAnswer === 'a';
 
-                    // 检查选项顺序
-                    for (const option of options) {
-                        const text = option.textContent?.trim().toLowerCase() || '';
-                        if (text.includes('错误') || text.includes('false') || text.includes('×') || text.includes('x')) {
-                            if (option === options[0]) {
-                                correctFirst = false;
-                                break;
-                            }
-                        }
+                    // 获取当前题目的选项
+                    const options = question.element.querySelectorAll('.option');
+                    if (options.length !== 2) {
+                        debug(`判断题选项数量异常：${options.length}`);
+                        continue;
                     }
 
-                    debug(`判断题选项顺序：${correctFirst ? '"正确"在前' : '"错误"在前'}`);
+                    // 解析每个选项的文本
+                    const optionTexts = Array.from(options).map(opt => 
+                        opt.textContent?.trim().toLowerCase() || ''
+                    );
 
-                    // 根据答案和选项顺序决定点击哪个选项
-                    const isCorrect = answer.toUpperCase() === 'A';
-                    // 如果正确在前，A对应第一个选项；如果错误在前，A对应第二个选项
-                    const targetIndex = correctFirst ? 
-                        (isCorrect ? 1 : 2) : // 正确在前：A选1，B选2
-                        (isCorrect ? 2 : 1);
+                    // 判断第一个选项是否为"正确"
+                    const firstOptionCorrect = optionTexts[0].includes('正确') || 
+                                            optionTexts[0].includes('true') || 
+                                            optionTexts[0].includes('对') || 
+                                            optionTexts[0].includes('√');
+
+                    debug(`判断题 ${index} 选项顺序：${firstOptionCorrect ? '"正确"在前' : '"错误"在前'}`);
+                    debug(`判断题 ${index} 答案解析：${isCorrect ? '正确' : '错误'}`);
+
+                    // 根据答案和当前题目的选项顺序决定点击哪个选项
+                    const targetIndex = firstOptionCorrect ? 
+                        (isCorrect ? 1 : 2) : // 正确在前：正确选1，错误选2
+                        (isCorrect ? 2 : 1);  // 错误在前：正确选2，错误选1
 
                     const targetOption = question.element.querySelector(`.option:nth-child(${targetIndex})`) as HTMLElement;
                     if (targetOption) {
-                        debug(`点击判断题选项：${isCorrect ? '正确' : '错误'} (第${targetIndex}个选项)`);
+                        debug(`点击判断题 ${index} 选项：${isCorrect ? '正确' : '错误'} (第${targetIndex}个选项)`);
                         targetOption.click();
                     } else {
-                        debug('未找到判断题的选项元素');
+                        debug(`未找到判断题 ${index} 的选项元素`);
                     }
                 } else if (question.type === 'text') {
                     // 填空题或简答题
@@ -668,20 +558,6 @@ export class AnswerHandler {
                 debug(`选项索引超出范围：${letter} -> ${optionIndex}`);
             }
         }
-    }
-
-    private async processBlankAnswer(questionIndex: number, blankNumber: number, answer: string): Promise<void> {
-        const question = this.questions.find(q => q.index === questionIndex);
-        if (!question || !question.blanks) return;
-
-        // 找到对应的填空框
-        const blank = question.blanks.find(b => b.number === blankNumber);
-        if (!blank) return;
-
-        // 设置答案
-        blank.element.value = answer;
-        blank.element.dispatchEvent(new Event('input', { bubbles: true }));
-        blank.element.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     public stopAutoAnswer(): void {

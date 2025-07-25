@@ -13,6 +13,7 @@ export const questionDetail: string
 export const apiConfig: string
 export const formItem: string
 export const inputGroup: string
+export const getTokenBtn: string
 export const apiKeyHelp: string
 export const btnContainer: string
 export const btn: string
@@ -38,6 +39,7 @@ interface Namespace {
 	"apiConfig": string,
 	"formItem": string,
 	"inputGroup": string,
+	"getTokenBtn": string,
 	"apiKeyHelp": string,
 	"btnContainer": string,
 	"btn": string,

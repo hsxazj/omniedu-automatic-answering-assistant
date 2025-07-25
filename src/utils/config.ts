@@ -8,6 +8,7 @@ export interface Config {
     };
     customOpenAIUrl?: string;
     customOpenAIModel?: string;
+    questionBankToken?: string;
     debugMode: boolean;
 }
 
