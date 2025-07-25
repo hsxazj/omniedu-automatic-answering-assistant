@@ -1,6 +1,6 @@
 # OmniEdu自动答题助手
 
-这是一个面向[omniedu(中软国际教育)](www.omniedu.com)的Tampermonkey脚本，通过DOM解析的方式识别题目，然后通过ai接口来作答，支持多个AI接口的调用。
+这是一个面向[omniedu(中软国际教育)](www.omniedu.com)的Tampermonkey脚本，通过DOM解析的方式识别题目，然后通过ai接口来作答，支持多个AI接口的调用，或者你也可以填入[言溪题库](https://tk.enncy.cn/)的token来进行题库辅助搜题
 
 
 
@@ -23,6 +23,8 @@
 
 ![QQ_1752552103009](README.assets/QQ_1752552103009.png)
 
+
+
 ### 配置apiKey
 
 选择模型并填入密钥（Moonshot有15块钱免费额度，chatgpt未经测试）
@@ -37,6 +39,17 @@
 保存配置并测试连接，如果成功会弹出测试成功的提示
 
 ![QQ_1752552405810](README.assets/QQ_1752552405810.png)
+
+
+
+### 可选配置
+
+购买言溪题库api次数之后，可以在这里填入token，实现**更高的正确率**
+
+
+![QQ_1753438190814](README.assets/QQ_1753438190814.png)
+
+
 
 ### 开始答题
 
