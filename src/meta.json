@@ -1,7 +1,7 @@
 {
   "@name": "OmniEdu自动答题助手",
   "@namespace": "http://tampermonkey.net/",
-  "@version": "1.0",
+  "@version": "1.1",
   "@description": "OmniEdu在线教育平台自动答题助手，支持自动答题、自动提交等功能",
   "@author": "AI Assistant",
   "@match": [
@@ -24,5 +24,6 @@
     "api.moonshot.cn",
     "api.deepseek.com",
     "api.openai.com"
-  ]
+  ],
+  "@license": "MIT"
 }
