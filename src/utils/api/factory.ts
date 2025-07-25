@@ -2,6 +2,7 @@ import { BaseAPIProvider } from './base';
 import { MoonshotAPIProvider } from './moonshot';
 import { DeepSeekAPIProvider } from './deepseek';
 import { ChatGPTAPIProvider } from './chatgpt';
+import { CustomOpenAIAPIProvider } from './custom-openai';
 import { QuestionBankAPI } from './question-bank';
 import { getConfig } from '../config';
 
@@ -50,6 +51,12 @@ export class APIFactory {
                         apiKey
                     });
                     break;
+                case 'custom-openai':
+                    this.provider = new CustomOpenAIAPIProvider({
+                        apiKey,
+                        baseURL: config.customOpenAIUrl || 'https://api.openai.com/v1'
+                    });
+                    break;
                 case 'moonshot':
                 default:
                     this.provider = new MoonshotAPIProvider({
@@ -65,4 +72,4 @@ export class APIFactory {
         this.provider = null;
         this.questionBank = null;
     }
-} 
+}

@@ -23,7 +23,8 @@
   "@connect": [
     "api.moonshot.cn",
     "api.deepseek.com",
-    "api.openai.com"
-  ],
+    "api.openai.com",
+    "*"
+  ]
   "@license": "MIT"
 }
