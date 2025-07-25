@@ -2,6 +2,7 @@ import styles from '../styles/auto-answer.module.css';
 import { getConfig, saveConfig, debug, Config } from '../utils/config';
 import { AnswerHandler } from '../utils/answer';
 import { APIFactory } from '../utils/api/factory';
+import { QuestionBankAPI } from '../utils/api/question-bank';
 
 export class ConfigPanel {
     private panel: HTMLElement;
@@ -25,6 +26,7 @@ export class ConfigPanel {
             <div class="${styles.tabContainer}">
                 <div class="${styles.tab} ${styles.active}" data-tab="questions">识别题目</div>
                 <div class="${styles.tab}" data-tab="api">API配置</div>
+                <div class="${styles.tab}" data-tab="question-bank">题库配置</div>
             </div>
             <div class="${styles.tabContent} ${styles.active}" id="questions-tab">
                 <div class="${styles.questionGrid}"></div>
@@ -65,6 +67,22 @@ export class ConfigPanel {
                         <button class="${styles.btn} ${styles.btnPrimary}" id="test-api">测试连接</button>
                         <button class="${styles.btn} ${styles.btnPrimary}" id="save-api">保存配置</button>
                         <button class="${styles.btn} ${styles.btnDefault}" id="close-panel">关闭</button>
+                    </div>
+                </div>
+            </div>
+            <div class="${styles.tabContent}" id="question-bank-tab">
+                <div class="${styles.apiConfig}">
+                    <div class="${styles.formItem}">
+                        <label>题库Token</label>
+                        <div class="${styles.inputGroup}">
+                            <input type="password" id="question-bank-token" placeholder="请输入题库Token" value="">
+                            <button id="toggle-bank-password" title="显示/隐藏密码">👁️</button>
+                            <a href="https://tk.enncy.cn" target="_blank" class="${styles.getTokenBtn}">去获取</a>
+                        </div>
+                    </div>
+                    <div class="${styles.btnContainer}">
+                        <button class="${styles.btn} ${styles.btnPrimary}" id="test-bank">测试连接</button>
+                        <button class="${styles.btn} ${styles.btnPrimary}" id="save-bank">保存配置</button>
                     </div>
                 </div>
             </div>
@@ -218,6 +236,89 @@ export class ConfigPanel {
             saveConfig(this.currentConfig);
 
             // 重置API提供者，这样下次使用时会使用新的配置
+            APIFactory.getInstance().resetProvider();
+
+            alert('配置已保存');
+        });
+
+        // 初始化题库token
+        const questionBankInput = document.getElementById('question-bank-token') as HTMLInputElement;
+        questionBankInput.value = this.currentConfig.questionBankToken || '';
+
+        // 切换题库密码显示状态
+        document.getElementById('toggle-bank-password')?.addEventListener('click', (event) => {
+            const button = event.target as HTMLButtonElement;
+            const input = document.getElementById('question-bank-token') as HTMLInputElement;
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🔒';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+            }
+        });
+
+        // 测试题库连接
+        document.getElementById('test-bank')?.addEventListener('click', async () => {
+            const button = document.getElementById('test-bank');
+            if (!button) return;
+
+            const token = (document.getElementById('question-bank-token') as HTMLInputElement).value;
+
+            if (!token) {
+                alert('请输入题库Token');
+                return;
+            }
+
+            try {
+                button.textContent = '测试中...';
+                button.disabled = true;
+
+                // 添加超时控制
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('连接超时')), 5000);
+                });
+
+                const questionBank = new QuestionBankAPI(token);
+                const testPromise = questionBank.query('下列选项中，用于获取POST请求参数的是');
+
+                // 使用Promise.race实现超时控制
+                const result = await Promise.race([testPromise, timeoutPromise]);
+
+                if (result !== null) {
+                    alert('题库连接测试成功！');
+                    // 测试成功后自动保存配置
+                    this.currentConfig = {
+                        ...this.currentConfig,
+                        questionBankToken: token
+                    };
+                    saveConfig(this.currentConfig);
+                    debug('题库配置已保存');
+                } else {
+                    alert('题库连接测试失败：请检查Token是否正确');
+                }
+            } catch (error) {
+                alert('题库连接测试失败：' + error.message);
+            } finally {
+                button.textContent = '测试连接';
+                button.disabled = false;
+            }
+        });
+
+        // 保存题库配置
+        document.getElementById('save-bank')?.addEventListener('click', () => {
+            const token = (document.getElementById('question-bank-token') as HTMLInputElement).value;
+
+            // 更新配置
+            this.currentConfig = {
+                ...this.currentConfig,
+                questionBankToken: token
+            };
+            
+            // 保存配置
+            saveConfig(this.currentConfig);
+
+            // 重置API提供者
             APIFactory.getInstance().resetProvider();
 
             alert('配置已保存');

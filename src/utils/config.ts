@@ -5,6 +5,7 @@ export interface Config {
         deepseek?: string;
         chatgpt?: string;
     };
+    questionBankToken?: string;
     debugMode: boolean;
 }
 
